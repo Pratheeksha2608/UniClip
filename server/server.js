@@ -48,6 +48,20 @@ function generateSessionCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+function broadcastDeviceCount(sessionCode) {
+    const session = sessions.get(sessionCode);
+
+    if (!session) {
+        return;
+    }
+
+    session.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(`devices:${session.size}`);
+        }
+    });
+}
+
 server.on("connection", (socket) => {
     console.log("Client connected.");
 
@@ -57,13 +71,20 @@ server.on("connection", (socket) => {
         console.log("Client says:", text);
 
         if (text === "create") {
+            if (socket.sessionCode) {
+                console.log(`Client is already in session: ${socket.sessionCode}`);
+                return;
+            }
+
             const sessionCode = generateSessionCode();
 
             sessions.set(sessionCode, new Set([socket]));
 
+            socket.sessionCode = sessionCode;
+
             console.log(`Session created: ${sessionCode}`);
 
-            socket.send(sessionCode);
+            socket.send(`created:${sessionCode}:1`);
         }
 
         if (text.startsWith("join:")) {
@@ -72,28 +93,56 @@ server.on("connection", (socket) => {
             const session = sessions.get(sessionCode);
 
             if (session) {
+                if (socket.sessionCode) {
+                    console.log(`Client is already in session: ${socket.sessionCode}`);
+                    return;
+                }
+
                 session.add(socket);
 
+                socket.sessionCode = sessionCode;
+
                 console.log(`Client joined session: ${sessionCode}`);
+
+                console.log(`Devices in session: ${session.size}`);
+
+                broadcastDeviceCount(sessionCode);
+
+                socket.send(`joined:${sessionCode}:${session.size}`);
+
+            } else {
+                console.log(`Session not found: ${sessionCode}`);
             }
         }
 
         if (!text.startsWith("create") && !text.startsWith("join:")) {
-            sessions.forEach((session) => {
-                if (session.has(socket)) {
-                    session.forEach((client) => {
-                        if (client !== socket && client.readyState === WebSocket.OPEN) {
-                            client.send(text);
-                        }
-                    });
-                }
-            });
+            const session = sessions.get(socket.sessionCode);
+
+            if (session) {
+                session.forEach((client) => {
+                    if (client !== socket && client.readyState === WebSocket.OPEN) {
+                        client.send(text);
+                    }
+                });
+            }
         }
 
     });
 
     socket.on("close", () => {
         console.log("Client disconnected.");
+
+        const session = sessions.get(socket.sessionCode);
+
+        if (session) {
+            session.delete(socket);
+
+            if (session.size === 0) {
+                sessions.delete(socket.sessionCode);
+            } else {
+                broadcastDeviceCount(socket.sessionCode);
+            }
+        }
     });
 
 });

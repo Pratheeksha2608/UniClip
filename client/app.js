@@ -2,12 +2,65 @@ const socket = new WebSocket("ws://localhost:8080");
 
 let receivedText = "";
 
+let creatingSession = false;
+
+const createSessionButton = document.getElementById("createSessionButton");
+const sessionStatus = document.getElementById("sessionStatus");
+
+const sessionCodeInput = document.getElementById("sessionCodeInput");
+const joinSessionButton = document.getElementById("joinSessionButton");
+
+createSessionButton.addEventListener("click", () => {
+    creatingSession = true;
+    socket.send("create");
+});
+
+joinSessionButton.addEventListener("click", () => {
+    const sessionCode = sessionCodeInput.value;
+
+    socket.send(`join:${sessionCode}`);
+});
+
 socket.onopen = () => {
     console.log("Browser connected to server!");
 };
 
 socket.onmessage = (event) => {
     console.log("Server says:", event.data);
+
+    if (event.data.startsWith("created:")) {
+        const parts = event.data.split(":");
+
+        const sessionCode = parts[1];
+        const deviceCount = parts[2];
+
+        sessionStatus.textContent = `Session Code: ${sessionCode} | Devices: ${deviceCount}`;
+
+        creatingSession = false;
+        return;
+    }
+
+    if (event.data.startsWith("joined:")) {
+        const parts = event.data.split(":");
+
+        const sessionCode = parts[1];
+        const deviceCount = parts[2];
+
+        sessionStatus.textContent = `Joined Session: ${sessionCode} | Devices: ${deviceCount}`;
+        return;
+    }
+
+    if (event.data.startsWith("devices:")) {
+        const deviceCount = event.data.substring(8);
+
+        sessionStatus.textContent = sessionStatus.textContent.replace(
+            / \| Devices: \d+/,
+        ""
+        );
+
+        sessionStatus.textContent += ` | Devices: ${deviceCount}`;
+        return;
+    }
 
     receivedText = event.data;
 };
