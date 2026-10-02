@@ -36,7 +36,7 @@ const httpServer = http.createServer((req, res) => {
 
 const server = new WebSocket.Server({ server: httpServer });
 
-const clients = new Set();
+const sessions = new Map();
 
 console.log("WebSocket server running on ws://localhost:8080");
 
@@ -44,24 +44,56 @@ httpServer.listen(8080, () => {
     console.log("HTTP server running on http://localhost:8080");
 });
 
-server.on("connection", (socket) => {
-    clients.add(socket);
+function generateSessionCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
-    console.log(`Client connected. Total clients: ${clients.size}`);
+server.on("connection", (socket) => {
+    console.log("Client connected.");
 
     socket.on("message", (message) => {
-        console.log("Client says:", message.toString());
+        const text = message.toString();
 
-        clients.forEach((client) => {
-            if (client !== socket && client.readyState === WebSocket.OPEN) {
-                client.send(message.toString());
+        console.log("Client says:", text);
+
+        if (text === "create") {
+            const sessionCode = generateSessionCode();
+
+            sessions.set(sessionCode, new Set([socket]));
+
+            console.log(`Session created: ${sessionCode}`);
+
+            socket.send(sessionCode);
+        }
+
+        if (text.startsWith("join:")) {
+            const sessionCode = text.substring(5);
+
+            const session = sessions.get(sessionCode);
+
+            if (session) {
+                session.add(socket);
+
+                console.log(`Client joined session: ${sessionCode}`);
             }
-        });
+        }
+
+        if (!text.startsWith("create") && !text.startsWith("join:")) {
+            sessions.forEach((session) => {
+                if (session.has(socket)) {
+                    session.forEach((client) => {
+                        if (client !== socket && client.readyState === WebSocket.OPEN) {
+                            client.send(text);
+                        }
+                    });
+                }
+            });
+        }
+
     });
 
     socket.on("close", () => {
-        clients.delete(socket);
-
-        console.log(`Client disconnected. Total clients: ${clients.size}`);
+        console.log("Client disconnected.");
     });
+
 });
