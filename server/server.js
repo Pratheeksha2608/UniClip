@@ -73,6 +73,7 @@ server.on("connection", (socket) => {
         if (text === "create") {
             if (socket.sessionCode) {
                 console.log(`Client is already in session: ${socket.sessionCode}`);
+                socket.send("error:already-in-session");
                 return;
             }
 
@@ -90,13 +91,15 @@ server.on("connection", (socket) => {
         if (text.startsWith("join:")) {
             const sessionCode = text.substring(5);
 
+            if (socket.sessionCode) {
+                console.log(`Client is already in session: ${socket.sessionCode}`);
+                socket.send("error:already-in-session");
+                return;
+            }
+
             const session = sessions.get(sessionCode);
 
             if (session) {
-                if (socket.sessionCode) {
-                    console.log(`Client is already in session: ${socket.sessionCode}`);
-                    return;
-                }
 
                 session.add(socket);
 
@@ -112,8 +115,40 @@ server.on("connection", (socket) => {
 
             } else {
                 console.log(`Session not found: ${sessionCode}`);
+                socket.send("error:session-not-found");
             }
         }
+
+
+        if (text === "leave") {
+
+            const sessionCode = socket.sessionCode;
+
+            if (!sessionCode) {
+                return;
+            }
+
+            const session = sessions.get(sessionCode);
+
+            if (session) {
+
+                session.delete(socket);
+
+                if (session.size === 0) {
+                    sessions.delete(sessionCode);
+                } else {
+                    broadcastDeviceCount(sessionCode);
+                }
+
+            }
+
+            socket.sessionCode = null;
+
+            socket.send("left");
+
+            return;
+        }
+
 
         if (!text.startsWith("create") && !text.startsWith("join:")) {
             const session = sessions.get(socket.sessionCode);

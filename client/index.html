@@ -13,14 +13,19 @@
     <input id="sessionCodeInput" type="text" placeholder="Enter session code">
     <button id="joinSessionButton">Join Session</button>
 
+    <p id="sessionState">Not in a session</p>
     <p id="sessionStatus"></p>
+    <p id="sessionMessage"></p>
 
-    <input id="messageInput" type="text" placeholder="Type a message">
-    <button id="sendButton">Send</button>
-    <button id="readClipboardButton">Read Clipboard</button>
-    <button id="writeClipboardButton">Write Clipboard</button>
+    <button id="leaveSessionButton">Leave Session</button>
+
+    <br><br>
+
     <button id="syncClipboardButton">Sync Clipboard</button>
-    <button id="copyReceivedButton">Copy Received Text</button>
+    
+    <h2>Clipboard History</h2>
+    <button id="clearHistoryButton">Clear History</button>
+    <div id="clipboardHistory"></div>
 
     <script src="app.js"></script>
 </body>
