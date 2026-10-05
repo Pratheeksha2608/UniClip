@@ -63,6 +63,24 @@ function broadcastDeviceCount(sessionCode) {
     });
 }
 
+function broadcastDeviceList(sessionCode) {
+    const session = sessions.get(sessionCode);
+
+    if (!session) {
+        return;
+    }
+
+    const deviceList = Array.from(session.clients)
+        .map((client) => client.deviceId)
+        .join(",");
+
+    session.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(`device-list:${deviceList}`);
+        }
+    });
+}
+
 function startSessionTimer(sessionCode) {
     const session = sessions.get(sessionCode);
 
@@ -93,7 +111,9 @@ function startSessionTimer(sessionCode) {
 }
 
 server.on("connection", (socket) => {
-    console.log("Client connected.");
+    socket.deviceId = Math.random().toString(36).substring(2, 8);
+
+    console.log(`Client connected: ${socket.deviceId}`);
 
     socket.on("message", (message) => {
         const text = message.toString();
@@ -146,6 +166,7 @@ server.on("connection", (socket) => {
                 console.log(`Devices in session: ${session.clients.size}`);
 
                 broadcastDeviceCount(sessionCode);
+                broadcastDeviceList(sessionCode);
 
                 socket.send(`joined:${sessionCode}:${session.clients.size}`);
 
@@ -168,12 +189,14 @@ server.on("connection", (socket) => {
 
             if (session) {
 
-                session.delete(socket);
+                session.clients.delete(socket);
 
                 if (session.size === 0) {
+                    clearTimeout(session.timeout);
                     sessions.delete(sessionCode);
                 } else {
                     broadcastDeviceCount(sessionCode);
+                    broadcastDeviceList(sessionCode);
                 }
 
             }
@@ -215,6 +238,7 @@ server.on("connection", (socket) => {
                 sessions.delete(sessionCode);
             } else {
                 broadcastDeviceCount(sessionCode);
+                broadcastDeviceList(sessionCode);
             }
         }
     });

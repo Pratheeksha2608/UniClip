@@ -48,6 +48,9 @@ function connectWebSocket() {
             sessionStatus.textContent = `Session Code: ${sessionCode} | Devices: ${deviceCount}`;
 
             inSession = true;
+
+            copySessionCodeButton.style.display = "inline-block";
+
             sessionState.textContent = "In a session";
             sessionMessage.textContent = "";
 
@@ -65,6 +68,9 @@ function connectWebSocket() {
             sessionStatus.textContent = `Joined Session: ${sessionCode} | Devices: ${deviceCount}`;
 
             inSession = true;
+
+            copySessionCodeButton.style.display = "inline-block";
+
             sessionState.textContent = "In a session";
             sessionMessage.textContent = "";
 
@@ -81,6 +87,24 @@ function connectWebSocket() {
 
             sessionStatus.textContent += ` | Devices: ${deviceCount}`;
          return;
+        }
+
+        if (event.data.startsWith("device-list:")) {
+
+            const deviceIds = event.data.substring(12).split(",");
+
+            deviceListElement.innerHTML = "<strong>Connected Devices:</strong>";
+
+            deviceIds.forEach((deviceId, index) => {
+
+                const deviceElement = document.createElement("div");
+
+                deviceElement.textContent = `Device ${index + 1} (${deviceId})`;
+
+                deviceListElement.appendChild(deviceElement);
+            });
+
+            return;
         }
 
         if (event.data === "error:session-not-found") {
@@ -105,6 +129,9 @@ function connectWebSocket() {
             sessionStatus.textContent = "You left the session.";
             sessionMessage.textContent = "";
 
+            deviceListElement.textContent = "";
+            copySessionCodeButton.style.display = "none";
+
             return;
         }
 
@@ -114,6 +141,9 @@ function connectWebSocket() {
             sessionState.textContent = "Not in a session";
             sessionStatus.textContent = "Session expired.";
             sessionMessage.textContent = "";
+            deviceListElement.textContent = "";
+            copySessionCodeButton.style.display = "none";
+
             return;
         }
 
@@ -139,6 +169,8 @@ let currentSessionCode = null;
 const createSessionButton = document.getElementById("createSessionButton");
 const sessionStatus = document.getElementById("sessionStatus");
 const sessionState = document.getElementById("sessionState");
+
+const deviceListElement = document.getElementById("deviceList");
 
 const copySessionCodeButton = document.getElementById("copySessionCodeButton");
 
