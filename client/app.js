@@ -108,6 +108,15 @@ function connectWebSocket() {
             return;
         }
 
+        if (event.data === "session-expired") {
+            inSession = false;
+            currentSessionCode = null;
+            sessionState.textContent = "Not in a session";
+            sessionStatus.textContent = "Session expired.";
+            sessionMessage.textContent = "";
+            return;
+        }
+
         clipboardHistory.push({
             text: event.data,
             direction: "received"

@@ -37,6 +37,7 @@ const httpServer = http.createServer((req, res) => {
 const server = new WebSocket.Server({ server: httpServer });
 
 const sessions = new Map();
+const SESSION_TIMEOUT = 10 * 60 * 1000;
 
 console.log("WebSocket server running on ws://localhost:8080");
 
@@ -55,11 +56,40 @@ function broadcastDeviceCount(sessionCode) {
         return;
     }
 
-    session.forEach((client) => {
+    session.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-            client.send(`devices:${session.size}`);
+            client.send(`devices:${session.clients.size}`);
         }
     });
+}
+
+function startSessionTimer(sessionCode) {
+    const session = sessions.get(sessionCode);
+
+    if (!session) {
+        return;
+    }
+
+    clearTimeout(session.timeout);
+
+    session.timeout = setTimeout(() => {
+        const currentSession = sessions.get(sessionCode);
+
+        if (!currentSession) {
+            return;
+        }
+
+        currentSession.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send("session-expired");
+                client.sessionCode = null;
+            }
+        });
+
+        sessions.delete(sessionCode);
+
+        console.log(`Session expired: ${sessionCode}`);
+    }, SESSION_TIMEOUT);
 }
 
 server.on("connection", (socket) => {
@@ -79,9 +109,13 @@ server.on("connection", (socket) => {
 
             const sessionCode = generateSessionCode();
 
-            sessions.set(sessionCode, new Set([socket]));
+            sessions.set(sessionCode, {
+                clients: new Set([socket]),
+                timeout: null
+            });
 
             socket.sessionCode = sessionCode;
+            startSessionTimer(sessionCode);
 
             console.log(`Session created: ${sessionCode}`);
 
@@ -101,17 +135,19 @@ server.on("connection", (socket) => {
 
             if (session) {
 
-                session.add(socket);
+                session.clients.add(socket);
 
                 socket.sessionCode = sessionCode;
 
+                startSessionTimer(sessionCode);
+
                 console.log(`Client joined session: ${sessionCode}`);
 
-                console.log(`Devices in session: ${session.size}`);
+                console.log(`Devices in session: ${session.clients.size}`);
 
                 broadcastDeviceCount(sessionCode);
 
-                socket.send(`joined:${sessionCode}:${session.size}`);
+                socket.send(`joined:${sessionCode}:${session.clients.size}`);
 
             } else {
                 console.log(`Session not found: ${sessionCode}`);
@@ -154,28 +190,31 @@ server.on("connection", (socket) => {
             const session = sessions.get(socket.sessionCode);
 
             if (session) {
-                session.forEach((client) => {
+                startSessionTimer(socket.sessionCode);
+
+                session.clients.forEach((client) => {
                     if (client !== socket && client.readyState === WebSocket.OPEN) {
                         client.send(text);
                     }
                 });
             }
         }
-
     });
 
     socket.on("close", () => {
         console.log("Client disconnected.");
 
-        const session = sessions.get(socket.sessionCode);
+        const sessionCode = socket.sessionCode;
+        const session = sessions.get(sessionCode);
 
         if (session) {
-            session.delete(socket);
+            session.clients.delete(socket);
 
-            if (session.size === 0) {
-                sessions.delete(socket.sessionCode);
+            if (session.clients.size === 0) {
+                clearTimeout(session.timeout);
+                sessions.delete(sessionCode);
             } else {
-                broadcastDeviceCount(socket.sessionCode);
+                broadcastDeviceCount(sessionCode);
             }
         }
     });
