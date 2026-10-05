@@ -2,6 +2,57 @@
 <html>
 <head>
     <title>UniClip</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+
+    button {
+        padding: 8px 12px;
+        margin: 4px;
+        cursor: pointer;
+    }
+
+    input {
+        padding: 8px;
+        width: 180px;
+    }
+
+    #clipboardHistory {
+        margin-top: 15px;
+    }
+
+    .history-item {
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+
+    .history-text {
+        margin-bottom: 8px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .history-direction {
+        font-size: 12px;
+        margin-bottom: 8px;
+        font-weight: bold;
+    }
+
+    .history-actions {
+        text-align: right;
+    }
+
+    .empty-history {
+        color: #777;
+        font-style: italic;
+    }
+</style>
 </head>
 <body>
     <h1>UniClip</h1>
@@ -14,7 +65,10 @@
     <button id="joinSessionButton">Join Session</button>
 
     <p id="sessionState">Not in a session</p>
+
     <p id="sessionStatus"></p>
+    <button id="copySessionCodeButton">Copy Code</button>
+
     <p id="sessionMessage"></p>
 
     <button id="leaveSessionButton">Leave Session</button>

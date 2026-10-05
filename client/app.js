@@ -130,6 +130,9 @@ let currentSessionCode = null;
 const createSessionButton = document.getElementById("createSessionButton");
 const sessionStatus = document.getElementById("sessionStatus");
 const sessionState = document.getElementById("sessionState");
+
+const copySessionCodeButton = document.getElementById("copySessionCodeButton");
+
 const sessionMessage = document.getElementById("sessionMessage");
 const clipboardHistoryElement = document.getElementById("clipboardHistory");
 const clearHistoryButton = document.getElementById("clearHistoryButton");
@@ -137,6 +140,21 @@ const clearHistoryButton = document.getElementById("clearHistoryButton");
 const sessionCodeInput = document.getElementById("sessionCodeInput");
 const joinSessionButton = document.getElementById("joinSessionButton");
 const leaveSessionButton = document.getElementById("leaveSessionButton");
+
+copySessionCodeButton.addEventListener("click", async () => {
+
+    if (!currentSessionCode) {
+        return;
+    }
+
+    await navigator.clipboard.writeText(currentSessionCode);
+
+    copySessionCodeButton.textContent = "Copied!";
+
+    setTimeout(() => {
+        copySessionCodeButton.textContent = "Copy Code";
+    }, 1000);
+});
 
 createSessionButton.addEventListener("click", () => {
     socket.send("create");
@@ -166,18 +184,49 @@ leaveSessionButton.addEventListener("click", () => {
 });
 
 function renderClipboardHistory() {
+
     clipboardHistoryElement.innerHTML = "";
 
-    clipboardHistory.forEach((entry, index) => {
-        const item = document.createElement("p");
+    if (clipboardHistory.length === 0) {
+        const emptyMessage = document.createElement("p");
 
-        item.textContent = `${entry.text} [${entry.direction}]`;
+        emptyMessage.textContent = "No clipboard items yet.";
+        emptyMessage.className = "empty-history";
+
+        clipboardHistoryElement.appendChild(emptyMessage);
+
+        return;
+    }
+
+    clipboardHistory.forEach((entry, index) => {
+
+        const item = document.createElement("div");
+        item.className = "history-item";
+
+        const text = document.createElement("div");
+        text.className = "history-text";
+        text.textContent = entry.text;
+
+        const direction = document.createElement("div");
+        direction.className = "history-direction";
+        direction.textContent = entry.direction.toUpperCase();
+
+        const actions = document.createElement("div");
+        actions.className = "history-actions";
 
         const copyButton = document.createElement("button");
         copyButton.textContent = "Copy";
 
         copyButton.addEventListener("click", async () => {
+
             await navigator.clipboard.writeText(entry.text);
+
+            copyButton.textContent = "Copied!";
+
+            setTimeout(() => {
+                copyButton.textContent = "Copy";
+            }, 1000);
+
             console.log("Copied from history:", entry.text);
         });
 
@@ -189,9 +238,12 @@ function renderClipboardHistory() {
             renderClipboardHistory();
         });
 
-        item.appendChild(copyButton);
+        actions.appendChild(copyButton);
+        actions.appendChild(deleteButton);
 
-        item.appendChild(deleteButton);
+        item.appendChild(text);
+        item.appendChild(direction);
+        item.appendChild(actions);
 
         clipboardHistoryElement.appendChild(item);
     });
@@ -212,6 +264,12 @@ syncClipboardButton.addEventListener("click", async () => {
     }
 
     const text = await navigator.clipboard.readText();
+
+    if (text.length > 10000) {
+        sessionStatus.textContent =
+            "Clipboard content is too large to sync. Maximum size is 10,000 characters.";
+        return;
+    }
 
     clipboardHistory.push({
         text: text,
