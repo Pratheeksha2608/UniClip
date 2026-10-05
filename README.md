@@ -618,7 +618,7 @@ A short demonstration video showing UniClip's main functionality will be added h
 
 
 
-\*\*Demo Video:\*\* \*Link will be added before submission.\*
+**Demo Video:** [Watch the UniClip Demo](https://drive.google.com/drive/folders/1ncDmr9rlGBTw51lwXnSho91yQd6lIcE3?usp=drive_link)
 
 
 
