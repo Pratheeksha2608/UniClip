@@ -59,7 +59,7 @@ function connectWebSocket() {
 
             const sessionCode = parts[1];
             const deviceCount = parts[2];
-            
+
             currentSessionCode = sessionCode;
 
             sessionStatus.textContent = `Joined Session: ${sessionCode} | Devices: ${deviceCount}`;
@@ -76,7 +76,7 @@ function connectWebSocket() {
 
             sessionStatus.textContent = sessionStatus.textContent.replace(
                 / \| Devices: \d+/,
-            ""
+                ""
             );
 
             sessionStatus.textContent += ` | Devices: ${deviceCount}`;
